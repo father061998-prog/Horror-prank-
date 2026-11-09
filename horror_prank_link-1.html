@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090909">
+<title>DON'T CLICK — Horror Prank</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at center,#351010 0,#100707 45%,#050505 100%);color:#fff;font-family:system-ui,Arial,sans-serif;text-align:center;padding:24px}
+  main{width:min(100%,440px);padding:34px 22px;border:1px solid #7d2525;border-radius:22px;background:#130b0be8;box-shadow:0 0 40px #b0000033}
+  .skull{font-size:64px;margin-bottom:10px}
+  h1{font-size:clamp(28px,8vw,42px);letter-spacing:2px;color:#ff3b3b;margin:8px 0}
+  p{color:#e5caca;line-height:1.5}
+  button{margin-top:22px;width:100%;padding:19px 12px;border:0;border-radius:12px;background:#d40000;color:white;font-size:22px;font-weight:900;letter-spacing:1px;cursor:pointer;box-shadow:0 6px 0 #760000}
+  button:active{transform:translateY(4px);box-shadow:0 2px 0 #760000}
+  small{display:block;color:#a98e8e;margin-top:18px}
+  #status{min-height:24px;color:#ffb3b3;margin-top:15px}
+</style>
+</head>
+<body>
+<main>
+  <div class="skull">☠️</div>
+  <h1>DON'T CLICK</h1>
+  <p> सावधान… अगर हिम्मत है तो बटन दबाओ।</p>
+  <button id="play">😱 TAP TO PLAY</button>
+  <div id="status" aria-live="polite"></div>
+  <small>आवाज़ चलाने के लिए बटन दबाना ज़रूरी है। फोन का मीडिया वॉल्यूम बढ़ा रखें।</small>
+</main>
+<script>
+let ctx;
+function scream(){
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC){document.getElementById('status').textContent='इस ब्राउज़र में ऑडियो सपोर्ट नहीं है।';return;}
+  ctx=ctx||new AC();
+  ctx.resume();
+  const now=ctx.currentTime, duration=4.2;
+  const master=ctx.createGain();
+  master.gain.setValueAtTime(0.0001,now);
+  master.gain.exponentialRampToValueAtTime(0.8,now+0.12);
+  master.gain.setValueAtTime(0.8,now+3.35);
+  master.gain.exponentialRampToValueAtTime(0.0001,now+duration);
+  master.connect(ctx.destination);
+
+  // Layered, synthetic horror-scream tone (not a recording of a person).
+  const osc=ctx.createOscillator(), wobble=ctx.createOscillator(), wobbleGain=ctx.createGain();
+  osc.type='sawtooth';
+  osc.frequency.setValueAtTime(520,now);
+  osc.frequency.exponentialRampToValueAtTime(1150,now+0.45);
+  osc.frequency.setValueAtTime(980,now+1.2);
+  osc.frequency.exponentialRampToValueAtTime(430,now+2.1);
+  osc.frequency.exponentialRampToValueAtTime(880,now+2.8);
+  osc.frequency.exponentialRampToValueAtTime(360,now+duration);
+  wobble.type='sine'; wobble.frequency.value=7; wobbleGain.gain.value=95;
+  wobble.connect(wobbleGain); wobbleGain.connect(osc.frequency);
+  const filter=ctx.createBiquadFilter(); filter.type='bandpass'; filter.frequency.value=1450; filter.Q.value=0.7;
+  osc.connect(filter); filter.connect(master);
+  osc.start(now); osc.stop(now+duration);
+
+  // Add breathy/noisy edge to make the effect more unsettling.
+  const length=Math.floor(ctx.sampleRate*duration);
+  const buffer=ctx.createBuffer(1,length,ctx.sampleRate), data=buffer.getChannelData(0);
+  for(let i=0;i<length;i++) data[i]=(Math.random()*2-1)*0.22;
+  const noise=ctx.createBufferSource(); noise.buffer=buffer;
+  const nf=ctx.createBiquadFilter(); nf.type='highpass'; nf.frequency.value=900;
+  const ng=ctx.createGain();
+  ng.gain.setValueAtTime(0.0001,now);
+  ng.gain.exponentialRampToValueAtTime(0.18,now+0.18);
+  ng.gain.setValueAtTime(0.12,now+3.2);
+  ng.gain.exponentialRampToValueAtTime(0.0001,now+duration);
+  noise.connect(nf); nf.connect(ng); ng.connect(master); noise.start(now); noise.stop(now+duration);
+  document.getElementById('status').textContent='😱 AAAAAAAHHHH!';
+  setTimeout(()=>document.getElementById('status').textContent='फिर से सुनने के लिए बटन दबाएँ।',4400);
+}
+document.getElementById('play').addEventListener('click',scream);
+</script>
+</body>
+</html>
